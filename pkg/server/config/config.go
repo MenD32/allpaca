@@ -29,13 +29,21 @@ func NewRecommendedConfig() *Config {
 		Model:        DEFAULT_MODEL,
 		Address:      DEFAULT_LISTEN_ADDRESS,
 		PerformanceConfig: PerformanceConfig{
-			ITLValue:  time.Second,
-			TTFTValue: time.Second * 2,
+			ITLValue:  1,
+			TTFTValue: 2,
 		},
 	}
 }
 
 type PerformanceConfig struct {
-	ITLValue  time.Duration `json:"itl_val"`
-	TTFTValue time.Duration `json:"ttft_val"`
+	ITLValue  float32 `json:"itl_val"`
+	TTFTValue float32 `json:"ttft_val"`
+}
+
+func (p *PerformanceConfig) GetITLValue() time.Duration {
+	return time.Duration(p.ITLValue) * time.Second
+}
+
+func (p *PerformanceConfig) GetTTFTValue() time.Duration {
+	return time.Duration(p.TTFTValue) * time.Second
 }

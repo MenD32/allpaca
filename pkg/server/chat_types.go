@@ -9,7 +9,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-type StreamOptions *struct {
+type StreamOptions struct {
 	IncludeUsage bool `json:"include_usage"`
 }
 
@@ -27,21 +27,21 @@ type ChatCompletionsRequestBody struct {
 	LogitBias        map[string]interface{} `json:"logit_bias,omitempty"`
 
 	// Deprecated: Use MaxCompletionTokens instead
-	MaxTokens           *int          `json:"max_tokens,omitempty"`
-	MaxCompletionTokens *int          `json:"max_completion_tokens,omitempty"`
-	N                   *int          `json:"n,omitempty"`
-	Modalities          []string      `json:"modalities,omitempty"`
-	Prediction          StaticContent `json:"prediction,omitempty"`
-	PresencePenalty     *float64      `json:"presence_penalty,omitempty"`
-	Seed                *int          `json:"seed,omitempty"`
-	ServiceTier         *string       `json:"service_tier,omitempty"`
-	Stop                []string      `json:"stop,omitempty"`
-	Stream              bool          `json:"stream,omitempty"`
-	StreamOptions       StreamOptions `json:"stream_options,omitempty"`
-	Temperature         *float64      `json:"temperature,omitempty"`
-	TopP                *float64      `json:"top_p,omitempty"`
-	ParallelToolCalls   bool          `json:"parallel_tool_calls,omitempty"`
-	User                string        `json:"user,omitempty"`
+	MaxTokens           *int           `json:"max_tokens,omitempty"`
+	MaxCompletionTokens *int           `json:"max_completion_tokens,omitempty"`
+	N                   *int           `json:"n,omitempty"`
+	Modalities          []string       `json:"modalities,omitempty"`
+	Prediction          StaticContent  `json:"prediction,omitempty"`
+	PresencePenalty     *float64       `json:"presence_penalty,omitempty"`
+	Seed                *int           `json:"seed,omitempty"`
+	ServiceTier         *string        `json:"service_tier,omitempty"`
+	Stop                []string       `json:"stop,omitempty"`
+	Stream              bool           `json:"stream,omitempty"`
+	StreamOptions       *StreamOptions `json:"stream_options,omitempty"`
+	Temperature         *float64       `json:"temperature,omitempty"`
+	TopP                *float64       `json:"top_p,omitempty"`
+	ParallelToolCalls   bool           `json:"parallel_tool_calls,omitempty"`
+	User                string         `json:"user,omitempty"`
 }
 
 type StaticContent struct {

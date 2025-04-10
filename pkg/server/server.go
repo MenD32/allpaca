@@ -44,49 +44,7 @@ func (s *Server) Validate(b *ChatCompletionsRequestBody) bool {
 
 func (s *Server) Start() {
 	klog.Info("Starting server...")
-	http.HandleFunc(s.config.ChatEndpoint, func(w http.ResponseWriter, r *http.Request) {
-		klog.Info("Received request for chat completions")
-
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		if r.Header.Get("Content-Type") != "application/json" {
-			http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
-			return
-		}
-
-		var requestBody ChatCompletionsRequestBody
-
-		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		requestBodyJSON, err := json.Marshal(requestBody)
-		if err != nil {
-			klog.Errorf("Failed to marshal request body: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		klog.Infof("Request Body: %s", requestBodyJSON)
-
-		if !s.Validate(&requestBody) {
-			http.Error(w, "Unprocessable entity", http.StatusUnprocessableEntity)
-			return
-		}
-
-		response := DEFAULT_RESPONSE
-
-		if requestBody.Stream {
-			s.streamResponse(w, response, requestBody.StreamOptions)
-		} else {
-			// TODO: Handle non-streaming response
-			// s.WriteResponse(w, response)
-			http.Error(w, "Not implemented", http.StatusNotImplemented)
-		}
-
-	})
+	http.HandleFunc(s.config.ChatEndpoint, s.HandleChatCompletions)
 
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", s.config.Address, s.config.Port), nil)
 	if err != nil {
@@ -94,7 +52,51 @@ func (s *Server) Start() {
 	}
 }
 
-func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, options StreamOptions) {
+func (s *Server) HandleChatCompletions(w http.ResponseWriter, r *http.Request) {
+	klog.Info("Received request for chat completions")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	var requestBody ChatCompletionsRequestBody
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	requestBodyJSON, err := json.Marshal(requestBody)
+	if err != nil {
+		klog.Errorf("Failed to marshal request body: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	klog.Infof("Request Body: %s", requestBodyJSON)
+
+	if !s.Validate(&requestBody) {
+		http.Error(w, "Unprocessable entity", http.StatusUnprocessableEntity)
+		return
+	}
+
+	response := DEFAULT_RESPONSE
+
+	if requestBody.Stream {
+		s.streamResponse(w, response, requestBody.StreamOptions)
+	} else {
+		// TODO: Handle non-streaming response
+		// s.WriteResponse(w, response)
+		http.Error(w, "Not implemented", http.StatusNotImplemented)
+	}
+
+}
+
+func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, options *StreamOptions) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -151,7 +153,7 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 			time.Sleep(delay)
 			fmt.Fprint(w, resp.ChunkString())
 			flusher.Flush()
-		}(resp, s.config.TTFTValue+s.config.ITLValue*time.Duration(i))
+		}(resp, s.config.GetTTFTValue()+s.config.GetITLValue()*time.Duration(i))
 	}
 
 	wg.Wait()
