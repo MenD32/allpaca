@@ -22,8 +22,8 @@ type Config struct {
 	PerformanceConfig
 }
 
-func NewRecommendedConfig() Config {
-	return Config{
+func NewRecommendedConfig() *Config {
+	return &Config{
 		Port:         DEFAULT_PORT,
 		ChatEndpoint: CHAT_COMPLETIONS_ENDPOINT,
 		Model:        DEFAULT_MODEL,

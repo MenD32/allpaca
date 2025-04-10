@@ -16,10 +16,10 @@ var (
 )
 
 type Server struct {
-	config config.Config
+	config *config.Config
 }
 
-func NewServer(c config.Config) *Server {
+func NewServer(c *config.Config) *Server {
 	return &Server{
 		config: c,
 	}
