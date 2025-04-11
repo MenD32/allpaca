@@ -12,7 +12,34 @@ import (
 )
 
 var (
-	DEFAULT_RESPONSE = []string{"Hi", "my", "name", "is", "Joe"}
+	DEFAULT_RESPONSE = []string{
+		"A",
+		"B",
+		"C",
+		"D",
+		"E",
+		"F",
+		"G",
+		"H",
+		"I",
+		"J",
+		"K",
+		"L",
+		"M",
+		"N",
+		"O",
+		"P",
+		"Q",
+		"R",
+		"S",
+		"T",
+		"U",
+		"V",
+		"W",
+		"X",
+		"Y",
+		"Z",
+	}
 )
 
 type Server struct {
@@ -43,7 +70,10 @@ func (s *Server) Validate(b *ChatCompletionsRequestBody) bool {
 }
 
 func (s *Server) Start() {
-	klog.Info("Starting server...")
+	klog.Infof("Server configuration: %+v", s.config)
+	klog.Infof("TTFT: %d", s.config.GetTTFTValue())
+	klog.Infof("ITL: %d", s.config.GetITLValue())
+	klog.Infof("Starting server on %s:%d...", s.config.Address, s.config.Port)
 	http.HandleFunc(s.config.ChatEndpoint, s.HandleChatCompletions)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		klog.Infof("Request path: %s", r.URL.Path)
@@ -147,28 +177,32 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 
 	var wg sync.WaitGroup
 	wg.Add(len(response))
+	start_time := time.Now().Add(s.config.GetTTFTValue())
 
 	fmt.Fprint(w, start_response.ChunkString())
-	klog.Infof("Response: %s", start_response.ChunkString())
 	flusher.Flush()
 
+	time.Sleep(time.Until(start_time))
+
 	for i, resp := range response {
-		go func(resp StreamingChatCompletionsResponse, delay time.Duration) {
+		go func(r StreamingChatCompletionsResponse, ts time.Time) {
 			defer wg.Done()
-			time.Sleep(delay)
-			fmt.Fprint(w, resp.ChunkString())
-			klog.Infof("Response: %s", resp.ChunkString())
+			time.Sleep(time.Until(ts))
+			time.Sleep(s.config.GetITLValue())
+			fmt.Fprint(w, r.ChunkString())
 			flusher.Flush()
-		}(resp, s.config.GetTTFTValue()+s.config.GetITLValue()*time.Duration(i))
+		}(
+			resp,
+			start_time.Add(s.config.GetITLValue()*time.Duration(i)),
+		)
 	}
 
 	wg.Wait()
+
 	fmt.Fprint(w, finish_response.ChunkString())
-	klog.Infof("Response: %s", finish_response.ChunkString())
 	flusher.Flush()
 
 	fmt.Fprint(w, "data: [DONE]\n\n")
-	klog.Infof("Response: %s", finish_response.ChunkString())
 	flusher.Flush()
 
 	w.Header().Set("HTTP/2", "200")

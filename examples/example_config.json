@@ -1,0 +1,8 @@
+{
+    "port": 9090,
+    "chat_endpoint": "/v1/chat/completions",
+    "model": "model",
+    "address": "127.0.0.1",
+    "itl_val": 0.01,
+    "ttft_val": 0.2
+}

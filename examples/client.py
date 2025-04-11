@@ -1,6 +1,6 @@
 import openai
 
-openai.base_url = "http://localhost:8080/v1/"
+openai.base_url = "http://localhost:9090/v1/"
 openai.api_key = "1234567890" # this is ignored anyhow
 
 completion = openai.chat.completions.create(
@@ -13,4 +13,4 @@ completion = openai.chat.completions.create(
 )
 
 for chunk in completion:
-  print(chunk)
+  print(chunk.choices[0].delta.content, end='', flush=True)

@@ -41,9 +41,9 @@ type PerformanceConfig struct {
 }
 
 func (p *PerformanceConfig) GetITLValue() time.Duration {
-	return time.Duration(p.ITLValue) * time.Second
+	return time.Duration(p.ITLValue * float32(time.Second))
 }
 
 func (p *PerformanceConfig) GetTTFTValue() time.Duration {
-	return time.Duration(p.TTFTValue) * time.Second
+	return time.Duration(p.TTFTValue * float32(time.Second))
 }
