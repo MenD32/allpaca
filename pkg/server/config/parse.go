@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	MIN_TTFT = 0.01
-	MIN_ITL  = 0.01
+	MIN_TTFT = 0.001
+	MIN_ITL  = 0.001
 )
 
 func ParseConfigFromFile(filePath string) (*Config, error) {

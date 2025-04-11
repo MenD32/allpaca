@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/MenD32/allpaca/pkg/server/config"
@@ -154,8 +153,6 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(response))
 	start_time := time.Now().Add(s.config.GetTTFTValue())
 
 	fmt.Fprint(w, start_response.ChunkString())
@@ -164,19 +161,10 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 	time.Sleep(time.Until(start_time))
 
 	for i, resp := range response {
-		go func(r StreamingChatCompletionsResponse, ts time.Time) {
-			defer wg.Done()
-			time.Sleep(time.Until(ts))
-			time.Sleep(s.config.GetITLValue())
-			fmt.Fprint(w, r.ChunkString())
-			flusher.Flush()
-		}(
-			resp,
-			start_time.Add(s.config.GetITLValue()*time.Duration(i)),
-		)
+		time.Sleep(time.Until(start_time.Add(s.config.GetITLValue() * time.Duration(i))))
+		fmt.Fprint(w, resp.ChunkString())
+		flusher.Flush()
 	}
-
-	wg.Wait()
 
 	fmt.Fprint(w, finish_response.ChunkString())
 	flusher.Flush()
