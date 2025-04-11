@@ -1,16 +1,16 @@
 FROM golang:1.24.2 AS builder
 
-
 WORKDIR /app
+RUN mkdir dist
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o allpaca .
+RUN make build
 
 FROM ubuntu:latest
 
 WORKDIR /root/
-COPY --from=builder /app/allpaca .
+COPY --from=builder /app/dist/allpaca .
 
 ENTRYPOINT ["./allpaca"]
