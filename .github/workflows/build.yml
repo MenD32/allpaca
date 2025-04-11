@@ -28,4 +28,4 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/MenD32/allpaca/allpaca:${{ github.sha }} --push .
+          docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/mend32/allpaca/allpaca:${{ github.sha }} --push .
