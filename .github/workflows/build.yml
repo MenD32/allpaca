@@ -1,7 +1,13 @@
-name: Create Tag
+name: Build
 
 on:
   push:
+    paths:
+      - 'pkg/**'
+      - '.github/workflows/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
 
 permissions:
   contents: write
