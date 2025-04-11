@@ -4,42 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/MenD32/allpaca/pkg/server/config"
 	"k8s.io/klog/v2"
-)
-
-var (
-	DEFAULT_RESPONSE = []string{
-		"A",
-		"B",
-		"C",
-		"D",
-		"E",
-		"F",
-		"G",
-		"H",
-		"I",
-		"J",
-		"K",
-		"L",
-		"M",
-		"N",
-		"O",
-		"P",
-		"Q",
-		"R",
-		"S",
-		"T",
-		"U",
-		"V",
-		"W",
-		"X",
-		"Y",
-		"Z",
-	}
 )
 
 type Server struct {
@@ -118,10 +88,25 @@ func (s *Server) HandleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := DEFAULT_RESPONSE
+	var response []string
+	var prompt_token_count, completion_token_count, total_token_count int
+	var usage *ChatCompletionsUsage = nil
+
+	for _, message := range requestBody.Messages {
+		response = append(response, strings.Split(message.Content, " ")...)
+		prompt_token_count += len(strings.Split(message.Content, " "))
+	}
+	completion_token_count = len(response)
+	total_token_count = prompt_token_count + completion_token_count
+
+	usage = &ChatCompletionsUsage{
+		CompletionTokens: completion_token_count,
+		PromptTokens:     prompt_token_count,
+		TotalTokens:      total_token_count,
+	}
 
 	if requestBody.Stream {
-		s.streamResponse(w, response, requestBody.StreamOptions)
+		s.streamResponse(w, response, requestBody.StreamOptions, usage)
 	} else {
 		// TODO: Handle non-streaming response
 		// s.WriteResponse(w, response)
@@ -130,7 +115,7 @@ func (s *Server) HandleChatCompletions(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, options *StreamOptions) {
+func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, options *StreamOptions, usage *ChatCompletionsUsage) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -153,15 +138,9 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 		)
 	}
 
-	var usage *ChatCompletionsUsage = nil
 	if options != nil && options.IncludeUsage {
-		usage = &ChatCompletionsUsage{
-			CompletionTokens: len(responseTokens),
-			PromptTokens:     0,
-			TotalTokens:      len(responseTokens),
-		}
+		usage = nil
 	}
-
 	finish_response := FinishedStreamingResponse(
 		config.DEFAULT_ID,
 		s.config.Model,
