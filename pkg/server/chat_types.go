@@ -14,7 +14,7 @@ type StreamOptions struct {
 }
 
 const (
-	OBJECT_TYPE_STREAMING = "chat.completions.chunk"
+	OBJECT_TYPE_STREAMING = "chat.completion.chunk"
 )
 
 type ChatCompletionsRequestBody struct {
@@ -63,7 +63,7 @@ type SystemMessage struct {
 
 type UserMessage struct {
 	Content string `json:"content"`
-	Role    string `json:"role"`
+	Role    string `json:"role,omitempty"`
 	Name    string `json:"name,omitempty"`
 }
 
@@ -76,10 +76,10 @@ type ChatCompletionsResponse struct {
 	Choices           []Choice              `json:"choices"`
 	Created           int64                 `json:"created"`
 	Model             string                `json:"model"`
-	ServiceTier       string                `json:"service_tier"`
+	ServiceTier       string                `json:"service_tier,omitempty"`
 	SystemFingerprint string                `json:"system_fingerprint"`
 	Object            string                `json:"object"`
-	Usage             *ChatCompletionsUsage `json:"usage"`
+	Usage             *ChatCompletionsUsage `json:"usage,omitempty"`
 }
 
 type StreamingChatCompletionsResponse struct {
@@ -87,10 +87,10 @@ type StreamingChatCompletionsResponse struct {
 	Choices           []StreamingChoice     `json:"choices"`
 	Created           int64                 `json:"created"`
 	Model             string                `json:"model"`
-	ServiceTier       string                `json:"service_tier"`
+	ServiceTier       string                `json:"service_tier,omitempty"`
 	SystemFingerprint string                `json:"system_fingerprint"`
 	Object            string                `json:"object"`
-	Usage             *ChatCompletionsUsage `json:"usage"`
+	Usage             *ChatCompletionsUsage `json:"usage,omitempty"`
 }
 
 type Choice struct {
@@ -106,15 +106,16 @@ type Choice struct {
 }
 
 type Delta struct {
-	Content *string `json:"content"`
-	Refusal *string `json:"refusal"`
-	Role    *string `json:"role"`
+	Content *string `json:"content,omitempty"`
+	Refusal *string `json:"refusal,omitempty"`
+	Role    *string `json:"role,omitempty"`
 }
 
 type StreamingChoice struct {
-	FinishReason *string `json:"finish_reason"`
-	Index        *int    `json:"index"`
-	Delta        Delta   `json:"delta"`
+	FinishReason *string   `json:"finish_reason"`
+	Index        *int      `json:"index"`
+	Delta        Delta     `json:"delta"`
+	LogProbs     *struct{} `json:"logprobs"`
 }
 
 func StartedStreamingResponse(
@@ -198,7 +199,7 @@ func (s *StreamingChatCompletionsResponse) ChunkString() string {
 		log.Panic(err)
 	}
 	return fmt.Sprintf(
-		"data: %s\n",
+		"data: %s\n\n",
 		chunkstring,
 	)
 }

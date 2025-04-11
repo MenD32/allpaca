@@ -45,6 +45,10 @@ func (s *Server) Validate(b *ChatCompletionsRequestBody) bool {
 func (s *Server) Start() {
 	klog.Info("Starting server...")
 	http.HandleFunc(s.config.ChatEndpoint, s.HandleChatCompletions)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		klog.Infof("Request path: %s", r.URL.Path)
+		http.Error(w, "Not found", http.StatusNotFound)
+	})
 
 	err := http.ListenAndServe(fmt.Sprintf("%s:%d", s.config.Address, s.config.Port), nil)
 	if err != nil {
@@ -103,15 +107,15 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.WriteHeader(http.StatusOK)
 
-	response := make([]StreamingChatCompletionsResponse, len(responseTokens)+2)
-	response[0] = StartedStreamingResponse(
+	response := make([]StreamingChatCompletionsResponse, len(responseTokens))
+	start_response := StartedStreamingResponse(
 		config.DEFAULT_ID,
 		s.config.Model,
 		config.DEFAULT_FINGERPRINT,
 	)
 
 	for i, token := range responseTokens {
-		response[i+1] = InProgressStreamingResponse(
+		response[i] = InProgressStreamingResponse(
 			config.DEFAULT_ID,
 			s.config.Model,
 			config.DEFAULT_FINGERPRINT,
@@ -128,7 +132,7 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 		}
 	}
 
-	response[len(response)-1] = FinishedStreamingResponse(
+	finish_response := FinishedStreamingResponse(
 		config.DEFAULT_ID,
 		s.config.Model,
 		config.DEFAULT_FINGERPRINT,
@@ -142,22 +146,30 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(len(response) - 2)
+	wg.Add(len(response))
 
-	fmt.Fprint(w, response[0].ChunkString())
+	fmt.Fprint(w, start_response.ChunkString())
+	klog.Infof("Response: %s", start_response.ChunkString())
 	flusher.Flush()
 
-	for i, resp := range response[1 : len(response)-1] {
+	for i, resp := range response {
 		go func(resp StreamingChatCompletionsResponse, delay time.Duration) {
 			defer wg.Done()
 			time.Sleep(delay)
 			fmt.Fprint(w, resp.ChunkString())
+			klog.Infof("Response: %s", resp.ChunkString())
 			flusher.Flush()
 		}(resp, s.config.GetTTFTValue()+s.config.GetITLValue()*time.Duration(i))
 	}
 
 	wg.Wait()
-	fmt.Fprint(w, response[len(response)-1].ChunkString())
+	fmt.Fprint(w, finish_response.ChunkString())
+	klog.Infof("Response: %s", finish_response.ChunkString())
 	flusher.Flush()
 
+	fmt.Fprint(w, "data: [DONE]\n\n")
+	klog.Infof("Response: %s", finish_response.ChunkString())
+	flusher.Flush()
+
+	w.Header().Set("HTTP/2", "200")
 }
