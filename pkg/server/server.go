@@ -44,6 +44,7 @@ func (s *Server) Start() {
 	klog.Infof("ITL: %d", s.config.GetITLValue())
 	klog.Infof("Starting server on %s:%d...", s.config.Address, s.config.Port)
 	http.HandleFunc(s.config.ChatEndpoint, s.HandleChatCompletions)
+	http.HandleFunc(s.config.ModelsEndpoint, s.HandleModels)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		klog.Infof("Request path: %s", r.URL.Path)
 		http.Error(w, "Not found", http.StatusNotFound)
@@ -53,6 +54,34 @@ func (s *Server) Start() {
 	if err != nil {
 		klog.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+func (s *Server) HandleModels(w http.ResponseWriter, r *http.Request) {
+	klog.Info("Received request for models")
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	models := []Model{
+		{
+			ID:      s.config.Model,
+			Object:  s.config.Model,
+			Created: time.Now().Unix(),
+			OwnedBy: "allpaca",
+		},
+	}
+
+	response, err := json.Marshal(models)
+	if err != nil {
+		klog.Errorf("Failed to marshal models response: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+	klog.Infof("Models response: %s", response)
 }
 
 func (s *Server) HandleChatCompletions(w http.ResponseWriter, r *http.Request) {

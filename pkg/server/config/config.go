@@ -9,16 +9,18 @@ const (
 	DEFAULT_MODEL             = "model"
 	DEFAULT_FINGERPRINT       = "fp_0123456789"
 	CHAT_COMPLETIONS_ENDPOINT = "/v1/chat/completions"
+	MODELS_ENDPOINT           = "/v1/models"
 	COMPLETIONS_OBJECT        = "chat.completion"
 	DEFAULT_PORT              = 8080
 	DEFAULT_LISTEN_ADDRESS    = "127.0.0.1"
 )
 
 type Config struct {
-	Port         int    `json:"port"`
-	ChatEndpoint string `json:"chat_endpoint"`
-	Model        string `json:"model"`
-	Address      string `json:"address"`
+	Port           int    `json:"port"`
+	ChatEndpoint   string `json:"chat_endpoint"`
+	ModelsEndpoint string `json:"models_endpoint"`
+	Model          string `json:"model"`
+	Address        string `json:"address"`
 	PerformanceConfig
 }
 

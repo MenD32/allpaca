@@ -1,6 +1,7 @@
 {
     "port": 9090,
     "chat_endpoint": "/v1/chat/completions",
+    "models_endpoint": "/v1/models",
     "model": "model",
     "address": "127.0.0.1",
     "itl_val": 0.01,
