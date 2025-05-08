@@ -9,6 +9,7 @@ const (
 	DEFAULT_MODEL             = "model"
 	DEFAULT_FINGERPRINT       = "fp_0123456789"
 	CHAT_COMPLETIONS_ENDPOINT = "/v1/chat/completions"
+	COMPLETIONS_ENDPOINT      = "/v1/completions"
 	MODELS_ENDPOINT           = "/v1/models"
 	COMPLETIONS_OBJECT        = "chat.completion"
 	DEFAULT_PORT              = 8080
@@ -16,23 +17,25 @@ const (
 )
 
 type Config struct {
-	Port           int    `json:"port"`
-	ChatEndpoint   string `json:"chat_endpoint"`
-	ModelsEndpoint string `json:"models_endpoint"`
-	Model          string `json:"model"`
-	Address        string `json:"address"`
+	Port                int    `json:"port"`
+	ChatEndpoint        string `json:"chat_endpoint"`
+	CompletionsEndpoint string `json:"completions_endpoint"`
+	ModelsEndpoint      string `json:"models_endpoint"`
+	Model               string `json:"model"`
+	Address             string `json:"address"`
 	PerformanceConfig
 }
 
 func NewRecommendedConfig() *Config {
 	return &Config{
-		Port:         DEFAULT_PORT,
-		ChatEndpoint: CHAT_COMPLETIONS_ENDPOINT,
-		Model:        DEFAULT_MODEL,
-		Address:      DEFAULT_LISTEN_ADDRESS,
+		Port:                DEFAULT_PORT,
+		ChatEndpoint:        CHAT_COMPLETIONS_ENDPOINT,
+		CompletionsEndpoint: COMPLETIONS_ENDPOINT,
+		Model:               DEFAULT_MODEL,
+		Address:             DEFAULT_LISTEN_ADDRESS,
 		PerformanceConfig: PerformanceConfig{
-			ITLValue:  1,
-			TTFTValue: 2,
+			ITLValue:  0.1,
+			TTFTValue: 0.2,
 		},
 	}
 }

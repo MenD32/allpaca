@@ -1,8 +1,9 @@
 {
     "port": 9090,
     "chat_endpoint": "/v1/chat/completions",
+    "completions_endpoint": "/v1/completions",
     "models_endpoint": "/v1/models",
-    "model": "model",
+    "model": "microsoft/Phi-3-mini-128k-instruct",
     "address": "127.0.0.1",
     "itl_val": 0.01,
     "ttft_val": 0.2

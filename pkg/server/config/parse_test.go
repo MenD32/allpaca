@@ -19,6 +19,8 @@ func TestParseConfigFromFile(t *testing.T) {
 		configContent := `{
 			"port": 8080,
 			"chat_endpoint": "/v1/chat/completions",
+			"completions_endpoint": "/v1/completions",
+			"models_endpoint": "/v1/models",
 			"model": "model",
 			"address": "127.0.0.1",
 			"itl_val": 1,

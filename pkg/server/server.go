@@ -21,7 +21,7 @@ func NewServer(c *config.Config) *Server {
 	}
 }
 
-func (s *Server) Validate(b *ChatCompletionsRequestBody) bool {
+func (s *Server) ValidateChatCompletionsRequestBody(b *ChatCompletionsRequestBody) bool {
 	if b.Model != s.config.Model {
 		klog.Infof("Model %s is not supported", b.Model)
 		return false
@@ -38,12 +38,35 @@ func (s *Server) Validate(b *ChatCompletionsRequestBody) bool {
 	return true
 }
 
+func (s *Server) ValidateCompletionRequest(b *CompletionRequest) bool {
+	if b.Model == "" {
+		klog.Info("Model cannot be empty")
+		return false
+	}
+
+	if b.Model != s.config.Model {
+		klog.Infof("Model %s is not supported", b.Model)
+		return false
+	}
+
+	if b.Prompt == nil {
+		klog.Info("Prompt cannot be empty")
+		return false
+	}
+
+	return true
+}
+
 func (s *Server) Start() {
 	klog.Infof("Server configuration: %+v", s.config)
 	klog.Infof("TTFT: %d", s.config.GetTTFTValue())
 	klog.Infof("ITL: %d", s.config.GetITLValue())
 	klog.Infof("Starting server on %s:%d...", s.config.Address, s.config.Port)
+	klog.Infof("Chat endpoint: %s", s.config.ChatEndpoint)
 	http.HandleFunc(s.config.ChatEndpoint, s.HandleChatCompletions)
+	klog.Infof("Completions endpoint: %s", s.config.CompletionsEndpoint)
+	http.HandleFunc(s.config.CompletionsEndpoint, s.HandleCompletions)
+	klog.Infof("Models endpoint: %s", s.config.ModelsEndpoint)
 	http.HandleFunc(s.config.ModelsEndpoint, s.HandleModels)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		klog.Infof("Request path: %s", r.URL.Path)
@@ -71,8 +94,12 @@ func (s *Server) HandleModels(w http.ResponseWriter, r *http.Request) {
 			OwnedBy: "allpaca",
 		},
 	}
+	response := map[string]interface{}{
+		"object": "list",
+		"data":   models,
+	}
 
-	response, err := json.Marshal(models)
+	responsebytes, err := json.Marshal(response)
 	if err != nil {
 		klog.Errorf("Failed to marshal models response: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -80,7 +107,7 @@ func (s *Server) HandleModels(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	w.Write(responsebytes)
 	klog.Infof("Models response: %s", response)
 }
 
@@ -111,7 +138,7 @@ func (s *Server) HandleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 	klog.Infof("Request Body: %s", requestBodyJSON)
 
-	if !s.Validate(&requestBody) {
+	if !s.ValidateChatCompletionsRequestBody(&requestBody) {
 		http.Error(w, "Unprocessable entity", http.StatusUnprocessableEntity)
 		return
 	}
@@ -141,6 +168,106 @@ func (s *Server) HandleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not implemented", http.StatusNotImplemented)
 	}
 
+}
+
+func (s *Server) HandleCompletions(w http.ResponseWriter, r *http.Request) {
+	klog.Info("Received request for chat completions")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	var requestBody CompletionRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	requestBodyJSON, err := json.Marshal(requestBody)
+	if err != nil {
+		klog.Errorf("Failed to marshal request body: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	klog.Infof("Request Body: %s", requestBodyJSON)
+
+	if !s.ValidateCompletionRequest(&requestBody) {
+		http.Error(w, "Unprocessable entity", http.StatusUnprocessableEntity)
+		return
+	}
+
+	var response []string
+
+	for _, message := range requestBody.GetPrompts() {
+		response = append(response, strings.Split(message, " ")...)
+	}
+
+	if requestBody.Stream {
+		s.streamResponseLegacy(w, response)
+	} else {
+		// TODO: Handle non-streaming response
+		// s.WriteResponse(w, response)
+		http.Error(w, "Not implemented", http.StatusNotImplemented)
+	}
+
+}
+
+func (s *Server) streamResponseLegacy(w http.ResponseWriter, responseTokens []string) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Transfer-Encoding", "chunked")
+	w.WriteHeader(http.StatusOK)
+
+	response := make([]CompletionStreamResponse, len(responseTokens))
+
+	for i, token := range responseTokens {
+		finishReason := ""
+		if i == len(responseTokens)-1 {
+			finishReason = "stop"
+		}
+		response[i] = CompletionStreamResponse{
+			ID:      config.DEFAULT_ID,
+			Object:  "text_completion",
+			Created: time.Now().Unix(),
+			Model:   s.config.Model,
+			Choices: []CompletionStreamChoice{
+				{
+					Text:         token,
+					Index:        i,
+					LogProbs:     nil,
+					FinishReason: finishReason,
+				},
+			},
+		}
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	start_time := time.Now().Add(s.config.GetTTFTValue())
+
+	time.Sleep(time.Until(start_time))
+
+	for i, resp := range response {
+		time.Sleep(time.Until(start_time.Add(s.config.GetITLValue() * time.Duration(i))))
+		fmt.Fprint(w, resp.ChunkString())
+		flusher.Flush()
+	}
+
+	fmt.Fprint(w, "data: [DONE]\n\n")
+	flusher.Flush()
+
+	w.Header().Set("HTTP/2", "200")
 }
 
 func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, options *StreamOptions, usage *ChatCompletionsUsage) {
