@@ -162,7 +162,7 @@ func InProgressStreamingResponse(
 				FinishReason: nil,
 				Index:        ptr.To(0),
 				Delta: Delta{
-					Content: ptr.To(token),
+					Content: ptr.To(fmt.Sprintf("%s ", token)),
 				},
 			},
 		},
