@@ -239,7 +239,7 @@ func (s *Server) streamResponseLegacy(w http.ResponseWriter, responseTokens []st
 			Model:   s.config.Model,
 			Choices: []CompletionStreamChoice{
 				{
-					Text:         token,
+					Text:         token+" ",
 					Index:        i,
 					LogProbs:     nil,
 					FinishReason: finishReason,
@@ -289,7 +289,7 @@ func (s *Server) streamResponse(w http.ResponseWriter, responseTokens []string, 
 			config.DEFAULT_ID,
 			s.config.Model,
 			config.DEFAULT_FINGERPRINT,
-			token,
+			token+" ",
 		)
 	}
 
